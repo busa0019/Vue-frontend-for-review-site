@@ -37,14 +37,17 @@
             <h2>{{ selectedReview.attributes.title }}</h2>
             <p class="text-muted">By {{ selectedReview.attributes.author }} • {{ formatDate(selectedReview.attributes.publishDate) }}</p>
             <span class="badge bg-success fs-6 mb-3">Rating: {{ selectedReview.attributes.rating }}/10</span>
-            <div v-if="selectedReview.attributes.coverImage?.data" class="mb-3">
+            
+            <!-- Fixed image display -->
+            <div v-if="selectedReview.attributes.coverImage?.length" class="mb-3">
               <img 
-                :src="`https://review-site-backend-va59.onrender.com${selectedReview.attributes.coverImage.data.attributes.url}`" 
+                :src="getImageUrl(selectedReview.attributes.coverImage[0])" 
                 class="img-fluid rounded"
                 :alt="selectedReview.attributes.title"
                 style="max-height: 300px;"
               >
             </div>
+            
             <div class="review-content">
               <p><strong>Summary:</strong> {{ selectedReview.attributes.excerpt }}</p>
               <div v-html="formatContent(selectedReview.attributes.content)"></div>
@@ -58,9 +61,10 @@
     <div v-else class="row">
       <div class="col-md-6 col-lg-4 mb-4" v-for="review in filteredReviews" :key="review.id">
         <div class="card h-100">
-          <div v-if="review.attributes.coverImage?.data" class="card-img-container">
+          <!-- Fixed image display -->
+          <div v-if="review.attributes.coverImage?.length" class="card-img-container">
             <img 
-              :src="`https://review-site-backend-va59.onrender.com${review.attributes.coverImage.data.attributes.url}`" 
+              :src="getImageUrl(review.attributes.coverImage[0])" 
               class="card-img-top" 
               :alt="review.attributes.title"
               style="height: 200px; object-fit: cover;"
@@ -121,6 +125,16 @@ export default {
     }
   },
   methods: {
+    getImageUrl(coverImage) {
+      if (!coverImage?.url) return '';
+      const url = coverImage.url;
+      // Handle both relative and absolute URLs
+      if (url.startsWith('http')) {
+        return url;
+      } else {
+        return `https://review-site-backend-va59.onrender.com${url}`;
+      }
+    },
     showFullReview(review) {
       this.selectedReview = review;
       // Scroll to top of page
