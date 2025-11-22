@@ -26,19 +26,58 @@
       {{ error }}
     </div>
     
+    <!-- Show selected review details -->
+    <div v-else-if="selectedReview" class="row">
+      <div class="col-12">
+        <div class="card mb-4">
+          <div class="card-body">
+            <button class="btn btn-secondary btn-sm mb-3" @click="selectedReview = null">
+              ← Back to All Reviews
+            </button>
+            <h2>{{ selectedReview.attributes.title }}</h2>
+            <p class="text-muted">By {{ selectedReview.attributes.author }} • {{ formatDate(selectedReview.attributes.publishDate) }}</p>
+            <span class="badge bg-success fs-6 mb-3">Rating: {{ selectedReview.attributes.rating }}/10</span>
+            <div v-if="selectedReview.attributes.coverImage?.data" class="mb-3">
+              <img 
+                :src="`https://review-site-backend-va59.onrender.com${selectedReview.attributes.coverImage.data.attributes.url}`" 
+                class="img-fluid rounded"
+                :alt="selectedReview.attributes.title"
+                style="max-height: 300px;"
+              >
+            </div>
+            <div class="review-content">
+              <p><strong>Summary:</strong> {{ selectedReview.attributes.excerpt }}</p>
+              <div v-html="formatContent(selectedReview.attributes.content)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Show all reviews list -->
     <div v-else class="row">
       <div class="col-md-6 col-lg-4 mb-4" v-for="review in filteredReviews" :key="review.id">
         <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title">{{ review.title }}</h5>
-            <p class="card-text">{{ review.excerpt }}</p>
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="badge bg-primary">⭐ {{ review.rating }}/10</span>
-              <span class="text-muted small">{{ review.author }}</span>
+          <div v-if="review.attributes.coverImage?.data" class="card-img-container">
+            <img 
+              :src="`https://review-site-backend-va59.onrender.com${review.attributes.coverImage.data.attributes.url}`" 
+              class="card-img-top" 
+              :alt="review.attributes.title"
+              style="height: 200px; object-fit: cover;"
+            >
+          </div>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ review.attributes.title }}</h5>
+            <p class="card-text flex-grow-1">{{ review.attributes.excerpt }}</p>
+            <div class="mt-auto">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="badge bg-primary">⭐ {{ review.attributes.rating }}/10</span>
+                <span class="text-muted small">{{ review.attributes.author }}</span>
+              </div>
             </div>
           </div>
           <div class="card-footer">
-            <button class="btn btn-primary btn-sm" @click="showFullReview(review)">
+            <button class="btn btn-primary btn-sm w-100" @click="showFullReview(review)">
               Read Full Review
             </button>
           </div>
@@ -58,40 +97,58 @@ export default {
       reviews: [],
       loading: true,
       searchQuery: '',
-      error: null
+      error: null,
+      selectedReview: null
     }
   },
   computed: {
     filteredReviews() {
       if (!this.searchQuery) return this.reviews;
       return this.reviews.filter(review => 
-        review.title.toLowerCase().includes(this.searchQuery.toLowerCase())
+        review.attributes.title.toLowerCase().includes(this.searchQuery.toLowerCase())
       );
     }
   },
   async mounted() {
     try {
-      console.log('Fetching reviews from API...');
-     const response = await axios.get('https://review-site-backend-va59.onrender.com/api/reviews?populate=*');
-      console.log('API Response:', response.data);
+      const response = await axios.get('https://review-site-backend-va59.onrender.com/api/reviews?populate=*');
       this.reviews = response.data.data;
       this.loading = false;
-      console.log('Successfully loaded', this.reviews.length, 'reviews');
     } catch (error) {
       console.error('Error loading reviews:', error);
       this.loading = false;
-      this.error = `Failed to load reviews: ${error.message}. Make sure Strapi is running on http://localhost:1337`;
+      this.error = `Failed to load reviews: ${error.message}.`;
     }
   },
   methods: {
     showFullReview(review) {
-      // The content is an array of blocks, we try to extract text from the first paragraph
-      const firstBlock = review.content?.[0];
-      let fullContent = 'No content available';
-      if (firstBlock && firstBlock.type === 'paragraph' && firstBlock.children) {
-        fullContent = firstBlock.children.map(child => child.text).join('');
+      this.selectedReview = review;
+      // Scroll to top of page
+      window.scrollTo(0, 0);
+    },
+    formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    },
+    formatContent(content) {
+      if (!content) return '<p>No content available.</p>';
+      
+      try {
+        if (Array.isArray(content)) {
+          return content.map(block => {
+            if (block.type === 'paragraph' && block.children) {
+              return `<p>${block.children.map(child => child.text).join('')}</p>`;
+            }
+            return '';
+          }).join('');
+        }
+        return `<p>${content}</p>`;
+      } catch (e) {
+        return '<p>Error loading content.</p>';
       }
-      alert(`BOOK REVIEW: ${review.title}\n\n${fullContent}`);
     }
   }
 }
@@ -99,4 +156,16 @@ export default {
 
 <style>
 @import 'bootstrap/dist/css/bootstrap.css';
+
+.review-content {
+  line-height: 1.6;
+}
+
+.review-content p {
+  margin-bottom: 1rem;
+}
+
+.card-img-container {
+  overflow: hidden;
+}
 </style>
