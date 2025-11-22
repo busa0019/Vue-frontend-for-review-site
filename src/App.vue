@@ -72,7 +72,7 @@ export default {
   async mounted() {
     try {
       console.log('Fetching reviews from API...');
-      const response = await axios.get('http://localhost:1337/api/reviews?populate=*');
+     const response = await axios.get('https://review-site-backend-va59.onrender.com/api/reviews?populate=*');
       console.log('API Response:', response.data);
       this.reviews = response.data.data;
       this.loading = false;
